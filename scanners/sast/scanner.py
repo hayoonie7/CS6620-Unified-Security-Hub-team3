@@ -10,12 +10,12 @@ from datetime import datetime, timezone
 SECURITY_RULES = [
     {
         "name": "Hardcoded Password",
-        "pattern": r'(?i)(password|passwd)\s*=\s*["\'][^"\']+["\']',
+        "pattern": r"""(?i)(password|passwd)\s*=\s*["'][^"']+["']""",
         "severity": "HIGH"
     },
     {
         "name": "Hardcoded API Key",
-        "pattern": r'(?i)(api_key|apikey|secret_key)\s*=\s*["\'][^"\']+["\']',
+        "pattern": r"""(?i)(api_key|apikey|secret_key)\s*=\s*["'][^"']+["']""",
         "severity": "HIGH"
     },
     {
@@ -35,7 +35,7 @@ SECURITY_RULES = [
     },
     {
         "name": "Potential SQL Injection",
-        "pattern": r'(?i)(execute|executemany)\s*\([^)]*(%s|\.format\s*\(|f["\'])',
+        "pattern": r"""(?i)(execute|executemany)\s*\([^)]*(%s|\.format\s*\(|f["'])""",
         "severity": "MEDIUM"
     }
 ]
@@ -45,21 +45,23 @@ def scan_file(file_path):
     findings = []
 
     try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as file:
+        with open(
+            file_path,
+            "r",
+            encoding="utf-8",
+            errors="replace"
+        ) as file:
             lines = file.readlines()
 
         for line_number, line in enumerate(lines, start=1):
-
             for rule in SECURITY_RULES:
-
                 if re.search(rule["pattern"], line):
-
                     findings.append({
                         "file": str(file_path),
                         "line": line_number,
                         "vulnerability": rule["name"],
                         "severity": rule["severity"],
-                        "description": f"Potential {rule['name']} detected."
+                        "description": f"{rule['name']} detected."
                     })
 
     except OSError as error:
@@ -114,12 +116,15 @@ def main():
         "findings": findings
     }
 
-    with open(args.output, "w", encoding="utf-8") as report_file:
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_path, "w", encoding="utf-8") as report_file:
         json.dump(report, report_file, indent=4)
 
     print("\nScan Completed!")
     print(f"Total findings: {len(findings)}")
-    print(f"Report saved to: {args.output}")
+    print(f"Report saved to: {output_path}")
 
 
 if __name__ == "__main__":
