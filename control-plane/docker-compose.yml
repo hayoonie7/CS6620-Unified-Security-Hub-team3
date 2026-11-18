@@ -1,0 +1,9 @@
+# Runs DynamoDB on laptop at http://localhost:8000
+# Start:  docker compose up -d
+# Stop:   docker compose down
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    ports:
+      - "8000:8000"
