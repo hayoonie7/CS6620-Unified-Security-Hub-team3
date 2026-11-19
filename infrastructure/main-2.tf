@@ -162,3 +162,41 @@ resource "aws_cloudwatch_metric_alarm" "scanner_failure" {
     Name = "security-hub-scanner-failure"
   }
 }
+# Private S3 access through a VPC Gateway Endpoint
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.security_hub.id
+  service_name      = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [
+    aws_route_table.public.id,
+    aws_vpc.security_hub.default_route_table_id
+  ]
+
+  tags = {
+    Name = "security-hub-s3-endpoint"
+  }
+}
+# Restrictive security group for penetration-testing tasks
+resource "aws_security_group" "pentest" {
+  name        = "security-hub-pentest-sg"
+  description = "Restrict network access for pentest scanner tasks"
+  vpc_id      = aws_vpc.security_hub.id
+
+  ingress = []
+  egress  = []
+
+  tags = {
+    Name = "security-hub-pentest-sg"
+  }
+}
+# Secrets Manager container for application credentials
+resource "aws_secretsmanager_secret" "app" {
+  name                    = "security-hub-app-secrets"
+  description             = "Application secrets for Unified Security Hub"
+  recovery_window_in_days = 7
+
+  tags = {
+    Name = "security-hub-app-secrets"
+  }
+}
