@@ -15,6 +15,8 @@ def get_sqs_client():
 def receive_job(queue_url, wait_time=20):
     """
     Receive one job message from an SQS queue.
+
+    Includes the SQS receive count to support retry limits.
     """
     sqs = get_sqs_client()
 
@@ -22,7 +24,8 @@ def receive_job(queue_url, wait_time=20):
         QueueUrl=queue_url,
         MaxNumberOfMessages=1,
         WaitTimeSeconds=wait_time,
-        VisibilityTimeout=120
+        VisibilityTimeout=120,
+        AttributeNames=["ApproximateReceiveCount"]
     )
 
     messages = response.get("Messages", [])
@@ -32,9 +35,19 @@ def receive_job(queue_url, wait_time=20):
 
     message = messages[0]
 
+    try:
+        body = json.loads(message["Body"])
+    except json.JSONDecodeError as error:
+        raise ValueError("Invalid JSON in SQS message body") from error
+
     return {
-        "body": json.loads(message["Body"]),
-        "receipt_handle": message["ReceiptHandle"]
+        "body": body,
+        "receipt_handle": message["ReceiptHandle"],
+        "receive_count": int(
+            message.get("Attributes", {}).get(
+                "ApproximateReceiveCount", "1"
+            )
+        )
     }
 
 
@@ -58,7 +71,7 @@ def send_job_result(queue_url, result):
 
     response = sqs.send_message(
         QueueUrl=queue_url,
-        MessageBody=json.dumps(result)
+        MessageBody=json.dumps(result, default=str)
     )
 
     return response["MessageId"]
